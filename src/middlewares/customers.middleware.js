@@ -11,11 +11,7 @@ export async function validateCustomer(req, res, next) {
     return res.status(400).send(errors);
   }
 
-  // if merhod is PUT, check if customer exists
-  if (req.method === "PUT") {
-    res.locals.customer = req.body;
-    return next();
-  }
+  
 
   const cpfExists = await db.query("SELECT * FROM customers WHERE cpf = $1", [
     req.body.cpf,
