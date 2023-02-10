@@ -10,7 +10,7 @@ import { validateCustomer } from "../middlewares/customers.middleware.js";
 const router = Router();
 
 router.post("/customers", validateCustomer, createCustomer);
-router.patch("/customers", updateCustomer);
+router.put("/customers/:id", validateCustomer, updateCustomer);
 router.get("/customers", readCustomers);
 router.get("/customers/:id", readCustomerById);
 
