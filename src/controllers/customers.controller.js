@@ -18,6 +18,7 @@ export async function createCustomer(req, res) {
 }
 
 export async function readCustomers(req, res) {
+
   
   try {       
     const result = await db.query('SELECT * FROM customers');
@@ -47,7 +48,7 @@ export async function readCustomerById(req, res) {
 
 export async function updateCustomer(req, res) {
   const { id } = req.params;
-  const { name, phone, cpf, birthday } = req.body;
+  const { name, phone, cpf, birthday } =res.locals.customer;
 
   try {
     const result = await db.query(
