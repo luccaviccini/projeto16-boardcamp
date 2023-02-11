@@ -11,14 +11,14 @@ export async function validateCustomer(req, res, next) {
     return res.status(400).send(errors);
   }
 
-  
-
-  const cpfExists = await db.query("SELECT * FROM customers WHERE cpf = $1", [
-    req.body.cpf,
-  ]);
-  if (cpfExists.rowCount > 0) {
-    return res.status(409).send("Customer already exists");
+  const cpfExists = await db.query(
+    "SELECT * FROM customers WHERE cpf = $1 AND id <> $2",
+    [req.body.cpf, req.params.id]
+  );
+  if (cpfExists.rowCount !== 0) {
+    return res.status(409).send("CPF already exists");
   }
+
 
   res.locals.customer = req.body;
   next();
