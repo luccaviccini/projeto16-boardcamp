@@ -40,30 +40,39 @@ export async function readRentals(req, res) {
   const { customerId, gameId } = req.query;
 
   // global query that ele
-  let query = `SELECT json_build_object(
-    'id', rentals.id,
-    'customerId', rentals."customerId",
-    'gameId', rentals."gameId",
-    'rentDate', rentals."rentDate",
-    'daysRented', rentals."daysRented",
-    'returnDate', rentals."returnDate",
-    'originalPrice', rentals."originalPrice",
-    'delayFee', rentals."delayFee",
-    'customer', json_build_object(
-        'id', customers.id,
-        'name', customers.name
-    ),
-    'game', json_build_object(
-        'id', games.id,
-        'name', games.name
-    )
-  ) AS result
+  let query = `SELECT
+    rental_game_customer.id,
+    rental_game_customer."customerId",
+    rental_game_customer."gameId",
+    rental_game_customer."rentDate",
+    rental_game_customer."daysRented",
+    rental_game_customer."returnDate",
+    rental_game_customer."originalPrice",
+    rental_game_customer."delayFee",
+    json_build_object('id', rental_game_customer.customer_id, 'name', rental_game_customer.customer_name) AS customer,
+    json_build_object('id', rental_game_customer.game_id, 'name', rental_game_customer.game_name) AS game
+  FROM (
+    SELECT
+      rentals.id,
+      rentals."customerId",
+      rentals."gameId",
+      rentals."rentDate",
+      rentals."daysRented",
+      rentals."returnDate",
+      rentals."originalPrice",
+      rentals."delayFee",
+      customers.id AS customer_id,
+      customers.name AS customer_name,
+      games.id AS game_id,
+      games.name AS game_name
     FROM rentals
     JOIN customers ON rentals."customerId" = customers.id
-    JOIN games ON rentals."gameId" = games.id;`;
+    JOIN games ON rentals."gameId" = games.id
+  ) AS rental_game_customer;`;
 
   try {
     const rentals = await db.query(query);
+    console.log("RENTALS: ", rentals.rows)
     res.send(rentals.rows);
   } catch (error) {
     res.status(500).send("Error getting rentals");
