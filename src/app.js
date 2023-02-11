@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import gamesRouter from "./routers/games.router.js";
 import customersRouter from "./routers/customers.router.js";
+import rentalsRouter from "./routers/rentals.router.js";
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 app.use(gamesRouter);
 app.use(customersRouter);
+app.use(rentalsRouter);
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
