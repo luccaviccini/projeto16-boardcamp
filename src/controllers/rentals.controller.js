@@ -79,6 +79,43 @@ export async function readRentals(req, res) {
   }
 }
 
+export async function finalizeRental(req, res) {
+  try {
+    const { id } = req.params;
+    const rental = await db.query(
+      `SELECT * FROM ${rentalsTable} WHERE id = $1`,
+      [id]
+    );
+    if (rental.rows.length === 0 || rental.rows[0].returnDate !== null) {
+      return res.sendStatus(404);
+    }
+
+    const rentDate = new Date(rental.rows[0].rentDate);
+    const returnDate = new Date();
+    const daysDif = Math.ceil(
+      Math.abs(returnDate - rentDate) / (1000 * 3600 * 24)
+    );
+    const game = await db.query(
+      `SELECT pricePerDay FROM ${gamesTable} WHERE id = $1`,
+      [rental.rows[0].gameId]
+    );
+    const delayFee =
+      daysDif > rental.rows[0].daysRented
+        ? (daysDif - rental.rows[0].daysRented) * game.rows[0].pricePerDay
+        : 0;
+
+    await db.query(
+      `UPDATE ${rentalsTable} SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
+      [returnDate.toISOString().split("T")[0], delayFee, id]
+    );
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+}
+
 // delete rental
 
 export async function deleteRental(req, res) {
@@ -87,19 +124,19 @@ export async function deleteRental(req, res) {
 
   try {
     const result = await db.query(`SELECT * FROM rentals WHERE id = $1`, [id]);
-    //VERIFICANDO SE O ID  EXISTE
     if (result.rowCount === 0) {
       return res.sendStatus(404);
     }
-    //VERIFICANDO SE O ALUGUEL JÁ FOI FINALIZADO
     console.log("RESULT: ", result.rows[0]);
     if (!result.rows[0].returnDate) {
-      return res.sendStatus(400);
+      return res.status(400).send("Rental has not been returned yet");
     }
 
     await db.query(`DELETE FROM rentals WHERE id = $1`, [id]);
     res.sendStatus(200);
   } catch (error) {
+    console.error(error);
     res.status(500).send("Error deleting rental");
   }
 }
+
