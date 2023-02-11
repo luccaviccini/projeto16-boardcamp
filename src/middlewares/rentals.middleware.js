@@ -21,7 +21,7 @@ export async function validateRental(req, res, next) {
     [gameId]
   );
   if (gameExists.rowCount === 0) {
-    return res.status(404).send("Game not found");
+    return res.status(400).send("Game not found");
   }
 
   const customerExists = await db.query(
@@ -29,14 +29,19 @@ export async function validateRental(req, res, next) {
     [customerId]
   );
   if (customerExists.rowCount === 0) {
-    return res.status(404).send("Customer not found");
+    return res.status(400).send("Customer not found");
+  }
+
+  // check if daysRented is > 0 otherwise return 400
+  if (daysRented <= 0) {
+    return res.status(400).send("Days rented must be greater than 0");
   }
 
   const rentals = await db.query(
     `SELECT * FROM rentals WHERE "gameId" = $1`, [gameExists.rows[0].id]
   );
 
-  if(rentals.rows.length > gameExists.rows[0].stockTotal) {
+  if(rentals.rows.length >= gameExists.rows[0].stockTotal) {
     return res.status(400).send("Game is not available");
   }
 
