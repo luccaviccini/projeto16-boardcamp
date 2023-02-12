@@ -80,39 +80,51 @@ export async function readRentals(req, res) {
 }
 
 export async function finalizeRental(req, res) {
+  const rentalId = req.params.id;
+  const todaysDate = new Date().toISOString().split("T")[0];
+  let gameRental;
+
   try {
-    const { id } = req.params;
-    const rental = await db.query(
-      `SELECT * FROM ${rentalsTable} WHERE id = $1`,
-      [id]
+    const rentalQueryResult = await db.query(
+      `SELECT * FROM rentals WHERE id = $1`,
+      [rentalId]
     );
-    if (rental.rows.length === 0 || rental.rows[0].returnDate !== null) {
-      return res.sendStatus(404);
+    if (!rentalQueryResult.rows.length) {
+      return res.status(404).send("Rental not found!");
     }
 
-    const rentDate = new Date(rental.rows[0].rentDate);
-    const returnDate = new Date();
-    const daysDif = Math.ceil(
-      Math.abs(returnDate - rentDate) / (1000 * 3600 * 24)
-    );
-    const game = await db.query(
-      `SELECT pricePerDay FROM ${gamesTable} WHERE id = $1`,
-      [rental.rows[0].gameId]
-    );
-    const delayFee =
-      daysDif > rental.rows[0].daysRented
-        ? (daysDif - rental.rows[0].daysRented) * game.rows[0].pricePerDay
-        : 0;
+    gameRental = rentalQueryResult.rows[0];
+    if (gameRental.returnDate !== null) {
+      return res.status(400).send("Rental already returned!");
+    }
 
+    const rentDate = new Date(gameRental.rentDate);
+    const returnDate = new Date(todaysDate);
+    const timeDiff = Math.abs(returnDate.getTime() - rentDate.getTime());
+    const differenceInDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const daysRented = gameRental.daysRented;
+    const returnDelay = differenceInDays - daysRented;
+
+    let delayFee = 0;
+    if (returnDelay > 0) {
+      const gameQueryResult = await db.query(
+        `SELECT * FROM games WHERE id = $1`,
+        [gameRental.gameId]
+      );
+
+      delayFee = returnDelay * gameQueryResult.rows[0].pricePerDay;
+    }
+
+    // UPDATING rentals TABLE
     await db.query(
-      `UPDATE ${rentalsTable} SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
-      [returnDate.toISOString().split("T")[0], delayFee, id]
+      `UPDATE rentals SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
+      [todaysDate, delayFee, rentalId]
     );
 
-    res.sendStatus(200);
+    res.status(200).send("Rental finalized!");
   } catch (error) {
     console.error(error);
-    res.sendStatus(500);
+    res.status(500).send("Error finalizing rental");
   }
 }
 
